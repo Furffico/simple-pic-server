@@ -11,9 +11,10 @@ function ImageCell(imgurl: string) {
 
 function App() {
   let location = useLocation();
+  console.log(location);
 
   useEffect(() => {
-    axios.get(location + "?format=json").then(res => {
+    axios.get(location.pathname + "/test?format=json").then(res => {
       console.log(res)
     })
   }, [location])
