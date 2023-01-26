@@ -1,0 +1,14 @@
+address = "127.0.0.1:3000"
+basepath = "./"
+hide_dotfile = true
+default_type = "plain"
+
+[templates.plain]
+path = 'templates/plain.html'
+is_embedded = true
+content_type = "text/html; charset=UTF-8"
+
+[templates.json]
+content = '{{ info | json_encode() | safe }}'
+content_type = 'application/json; charset=UTF-8'
+disabled = false

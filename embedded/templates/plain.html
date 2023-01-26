@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#000000" />
+    <title>Contents of {{ info.name }}</title>
+  </head>
+  <body>
+    <table>
+      {% for item in info.children | sort(attribute="name") %}
+      <tr>
+        <td><a href="{{ item.urlpath }}">{{ item.name }}</a></td>
+      </tr>
+      {% endfor %}
+    </table>
+  </body>
+</html>

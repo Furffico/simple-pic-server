@@ -1,5 +1,5 @@
 [package]
-name = "simplepicserver"
+name = "simple-pic-server"
 version = "0.1.0"
 edition = "2021"
 author = "furffy@github"
@@ -21,3 +21,4 @@ config = "0.13.3"
 include_dir = "0.7.3"
 serde_json = "1.0.91"
 serde = "1.0.152"
+tera = "1"
