@@ -1,4 +1,4 @@
-use crate::static_var::{EMBED_DIR, TEMPLATES};
+use crate::static_const::{EMBED_DIR, TEMPLATES, TEMPLATE_CONTEXT};
 use anyhow::Result;
 use config::Value;
 use tera::Context;
@@ -66,7 +66,8 @@ impl Template {
         }
     }
 
-    pub fn render(self: &Self, context: &Context) -> Result<(&str, String)> {
+    pub fn render(self: &Self, context: &mut Context) -> Result<(&str, String)> {
+        context.extend(TEMPLATE_CONTEXT.clone());
         Ok((&self.content_type, TEMPLATES.render(&self.name, context)?))
     }
 }

@@ -1,30 +1,37 @@
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
+use std::os::linux::fs::MetadataExt;
 use std::path::Path;
 use std::time::SystemTime;
+use urlencoding::encode;
+use mime_guess::{from_path as mime_from_path};
 
-use crate::static_var::*;
+use crate::static_const::*;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct FileMetadata {
     pub is_file: bool,
     pub is_folder: bool,
     pub is_symlink: bool,
-    pub modified: Option<f64>,
+    pub modified: Option<f64>,  // UNIX timestamp
     pub accessed: Option<f64>,
     pub created: Option<f64>,
+    pub size: u64,              // in bytes
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Fileinfo {
     pub name: String,
+    pub path: String,
     pub urlpath: String,
     pub metadata: Option<FileMetadata>,
+    pub mime_type: Option<String>,      // might be inaccurate
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct FolderInfo {
     pub name: String,
+    pub path: String,
     pub urlpath: String,
     pub children: Vec<Fileinfo>,
 }
@@ -47,6 +54,7 @@ impl From<std::fs::Metadata> for FileMetadata {
             modified: conv_systemtime_to_f64(mtd.modified()),
             accessed: conv_systemtime_to_f64(mtd.accessed()),
             created: conv_systemtime_to_f64(mtd.created()),
+            size: mtd.st_size(),
         }
     }
 }
@@ -57,16 +65,17 @@ impl From<std::fs::DirEntry> for Fileinfo {
             Ok(v) => Some(v.into()),
             Err(_) => None,
         };
+        let path = entry.path();
+        let path = path.as_path();
+        let urlpath = path.components().map(|v|encode(v.as_os_str().to_str().unwrap_or_default()).into_owned()).collect::<Vec<String>>().join("/");
+        let urlpath = urlpath.strip_prefix(".").unwrap_or(&urlpath).to_string();
+        let mime = mime_from_path(path).first().map(|v| v.to_string());
         Self {
             name: entry.file_name().to_str().unwrap().to_string(),
-            urlpath: entry
-                .path()
-                .to_str()
-                .unwrap()
-                .strip_prefix(".")
-                .unwrap_or_default()
-                .to_string(),
+            path: path.to_string_lossy().into_owned(),
+            urlpath: urlpath,
             metadata: metadata,
+            mime_type: mime,
         }
     }
 }
@@ -103,6 +112,7 @@ impl FolderInfo {
                 .to_str()
                 .unwrap_or_default()
                 .to_string(),
+            path: path.to_string_lossy().into_owned(),
             urlpath: path
                 .to_str()
                 .unwrap()

@@ -1,18 +1,19 @@
-use crate::static_var::EMBED_DIR;
+use crate::static_const::EMBED_DIR;
 use std::convert::Infallible;
 use std::net::SocketAddr;
 use std::path::Path;
 
-use anyhow::Result;
+use anyhow::{Result, anyhow};
 use hyper::http::HeaderValue;
 use hyper::service::{make_service_fn, service_fn};
 use hyper::{Body, Request, Response, Server, StatusCode};
 use querystring::querify;
 use tera::Context;
 use tokio::{fs::File, io::AsyncReadExt};
+use urlencoding::decode;
 
 use crate::finfo::FolderInfo;
-use crate::static_var::*;
+use crate::static_const::*;
 
 type Query<'a> = querystring::QueryParams<'a>;
 type HandlerResponse = Result<Response<Body>>;
@@ -34,11 +35,12 @@ macro_rules! BAD_REQUEST_ERR {
 }
 
 macro_rules! INTERNAL_SERVER_ERR {
-    () => {
+    ( $err:expr ) => {{
+        println!("{:?}", $err);
         Ok(Response::builder()
             .status(StatusCode::INTERNAL_SERVER_ERROR)
             .body("internal server error".into())?)
-    };
+    }};
 }
 
 fn getvalue_from_query<'a>(q: &Query<'a>, key: &str) -> Option<&'a str> {
@@ -68,13 +70,12 @@ async fn folder_handler(_req: &Request<Body>, path: &Path, query: &Query<'_>) ->
 
     let mut ctx = Context::default();
     ctx.insert("info", &folderinfo);
-    ctx.insert("static_path", STATIC_PATH);
 
-    match template.render(&ctx) {
+    match template.render(&mut ctx) {
         Ok((content_type, body)) => Ok(Response::builder()
             .header("content-type", content_type)
             .body(body.into())?),
-        Err(_) => INTERNAL_SERVER_ERR!(),
+        Err(e) => INTERNAL_SERVER_ERR!(e),
     }
 }
 
@@ -95,9 +96,11 @@ async fn static_handler(_req: &Request<Body>, path: &str, _query: &Query<'_>) ->
 }
 
 async fn main_handler(req: Request<Body>) -> HandlerResponse {
-    let uripath = req.uri().path();
-    let path = uripath.strip_prefix("/").unwrap();
-    let path = Path::new(&CONFIG.get_string("basepath")?).join(path);
+    let uripath = match decode(req.uri().path()){
+        Ok(v) => v.into_owned(),
+        Err(_) => return NOT_FOUND_ERR!(),
+    };
+    let path = Path::new("./").join(uripath.strip_prefix("/").unwrap());
     let path = path.as_path();
 
     let query = req.uri().query().unwrap_or_default();
@@ -107,7 +110,7 @@ async fn main_handler(req: Request<Body>) -> HandlerResponse {
     if path.is_dir() {
         folder_handler(&req, path, &query).await
     } else if uripath.starts_with(STATIC_PATH) {
-        static_handler(&req, uripath, &query).await
+        static_handler(&req, &uripath, &query).await
     } else if path.is_file() {
         file_handler(&req, path, &query).await
     } else {
@@ -115,7 +118,8 @@ async fn main_handler(req: Request<Body>) -> HandlerResponse {
             // returns 404 if the path does not exist
             Ok(false) => NOT_FOUND_ERR!(),
             // I think it's impossible to be true
-            Ok(true) | Err(_) => INTERNAL_SERVER_ERR!(),
+            Err(e) => INTERNAL_SERVER_ERR!(e),
+            _ => Err(anyhow!("It is impossible")),
         }
     }
 }

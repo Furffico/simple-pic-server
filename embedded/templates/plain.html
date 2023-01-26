@@ -1,18 +1,49 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#000000" />
-    <title>Contents of {{ info.name }}</title>
-  </head>
-  <body>
-    <table>
-      {% for item in info.children | sort(attribute="name") %}
-      <tr>
-        <td><a href="{{ item.urlpath }}">{{ item.name }}</a></td>
-      </tr>
-      {% endfor %}
-    </table>
-  </body>
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="theme-color" content="#000000" />
+		<title>Contents of /{{ info.name }}</title>
+		<style>
+			img.icon{height:1.5em; width:1.5em}
+			img.icon.smaller{height:1em; width:1em}
+			.container{margin:2em}
+			a{color: #222}
+			.filelist{margin-left:1em}
+			table.filelist th{text-align: left}
+			table.filelist tr>*:not(:first-child){padding-right:1em}
+		</style>
+	</head>
+	<body>
+		<div class="container">
+			<h1>Contents of /{{ info.name }}</h1>
+			<table class="filelist">
+				<tr><th></th><th>File Name</th><th>Size</th><th>Created at</th><th>Modified at</th></tr>
+				{% for item in info.children | sort(attribute="name") -%}
+				<tr><td>
+						{%- if item.metadata.is_folder -%}
+							<img src="{{ static_path }}/folder_icon.svg" class="icon" />
+						{%- elif item.metadata.is_file -%}
+							{%- set mime = item.mime_type | default(value="") -%}
+							{%- if mime is starting_with("image") -%}
+							<img src="{{ static_path }}/image_icon.svg" class="icon" />
+							{%- elif mime is starting_with("text") -%}
+							<img src="{{ static_path }}/text_icon.svg" class="icon" />
+							{%- elif mime is starting_with("video") -%}
+							<img src="{{ static_path }}/video_icon.svg" class="icon" />
+							{%- else -%}
+							<img src="{{ static_path }}/file_icon.svg" class="icon" />
+							{%- endif -%}
+						{%- endif -%}
+					</td><td><a href="{{ item.urlpath }}">{{ item.name | truncate(length=75) }}</a>
+						{%- if item.metadata.is_link -%}<img src="{{ static_path }}/link_icon.svg" class="icon smaller" />{%- endif -%}
+					</td><td>{{- item.metadata.size | filesizeformat -}}
+					</td><td>{{- item.metadata.created | int | date(format=time_format, timezone=timezone) -}}
+					</td><td>{{- item.metadata.modified | int | date(format=time_format, timezone=timezone) -}}
+					</td></tr>
+				{% endfor -%}
+			</table>
+		</div>
+	</body>
 </html>

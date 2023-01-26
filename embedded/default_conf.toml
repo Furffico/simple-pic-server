@@ -1,7 +1,9 @@
 address = "127.0.0.1:3000"
-basepath = "./"
+basepath = './'
 hide_dotfile = true
 default_type = "plain"
+timezone = 'Asia/Shanghai'
+time_format = '%Y-%m-%d %H:%M:%S'
 
 [templates.plain]
 path = 'templates/plain.html'

@@ -2,7 +2,7 @@ use crate::template::Template;
 use config::{Config, File as ConfigFile, FileFormat};
 use include_dir::{include_dir, Dir};
 use std::collections::HashMap;
-use tera::Tera;
+use tera::{Tera, Context};
 
 pub static STATIC_PATH: &str = "/static_contents";
 pub static EMBED_DIR: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/embedded");
@@ -35,5 +35,13 @@ lazy_static::lazy_static! {
             tera.add_raw_template(k, v.get_content()).expect("Error in template syntax");
         }
         tera
+    };
+
+    pub static ref TEMPLATE_CONTEXT: Context = {
+        let mut ctx = Context::default();
+        ctx.insert("static_path", STATIC_PATH);
+        ctx.insert("timezone", &CONFIG.get_string("timezone").expect("invalid config"));
+        ctx.insert("time_format", &CONFIG.get_string("time_format").expect("invalid config"));
+        ctx
     };
 }
